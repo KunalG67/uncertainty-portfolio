@@ -122,17 +122,18 @@ python src/plots.py
 
 | Portfolio Strategy | Annualized Return | Sharpe Ratio | Max Drawdown | Calmar Ratio |
 |-------------------|-------------------|--------------|--------------|--------------|
-| Equal Weight | 21.22% | 1.29 | -24.43% | 0.87 |
-| Risk-Adjusted | 60.98% | 3.68 | -24.43% | 2.50 |
-| Regime-Aware | 38.33% | 2.35 | -24.43% | 1.57 |
+| Equal Weight | 1.73% | -0.04 | -10.62% | 0.16 |
+| Risk-Adjusted | 35.10% | 3.69 | -5.84% | 6.01 |
+| Regime-Aware | 16.09% | 1.83 | -8.69% | 1.85 |
 
 **Key Findings:**
-- **Risk-Adjusted strategy outperforms** with 60.98% annualized return and 3.68 Sharpe ratio
-- All strategies maintain the same max drawdown (-24.43%), suggesting consistent risk control
-- Regime-Aware strategy balances return (38.33%) and risk, offering middle-ground performance
-- Uncertainty-based weighting significantly improves risk-adjusted returns
+- **Risk-Adjusted strategy significantly outperforms** with 35.10% annualized return and 3.69 Sharpe ratio
+- Risk-Adjusted also has the lowest max drawdown (-5.84%), demonstrating superior risk management
+- Uncertainty-based weighting achieves 6.01 Calmar ratio vs 0.16 for equal weight (37.6x improvement)
+- Regime-Aware strategy balances return (16.09%) with moderate risk, performing well in varying market conditions
+- Equal Weight baseline shows negative Sharpe ratio, highlighting the value of ML-driven allocation
 
-*Results computed on 2018-2024 historical data (6 years) with monthly rebalancing. Initial capital: $100,000*
+*Results computed on test set (2020-2024 data) with monthly rebalancing. Backtesting starts from first date with valid ML predictions. Initial capital: $100,000*
 
 ## Results & Visualizations
 
