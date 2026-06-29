@@ -64,6 +64,8 @@ weights_df = pd.DataFrame(portfolio_weights)
 weights_df.to_csv('data/portfolio_weights.csv', index=False)
 
 print(f"Portfolio weights shape: {weights_df.shape}")
+print(f"Date range: {weights_df['date'].min()} to {weights_df['date'].max()}")
+print(f"Unique dates: {weights_df['date'].nunique()}")
 print(f"Weight sums per date (equal): {weights_df.groupby('date')['weight_equal'].sum().mean():.4f}")
 print(f"Weight sums per date (risk-adjusted): {weights_df.groupby('date')['weight_risk_adjusted'].sum().mean():.4f}")
 print(f"Weight sums per date (regime-aware): {weights_df.groupby('date')['weight_regime_aware'].sum().mean():.4f}")

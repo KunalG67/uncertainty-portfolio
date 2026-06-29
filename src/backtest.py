@@ -27,7 +27,7 @@ def calculate_metrics(portfolio_values, rf_rate=0.02):
         'Calmar Ratio': calmar_ratio
     }
 
-def backtest_portfolio(prices, weights_df, weight_col, initial_capital=100000):
+def backtest_portfolio(prices, weights_df, weight_col, initial_capital=100000, start_date=None):
     """Run backtest for a portfolio using specified weights."""
     portfolio_values = [initial_capital]
     current_value = initial_capital
@@ -37,8 +37,14 @@ def backtest_portfolio(prices, weights_df, weight_col, initial_capital=100000):
     last_stocks = None
 
     sample_weights = []
+    start_idx = 0
 
-    for i in range(1, len(dates)):
+    if start_date is not None:
+        start_idx = (dates >= start_date).argmax()
+        portfolio_values = [initial_capital] * start_idx
+        current_value = initial_capital
+
+    for i in range(max(1, start_idx), len(dates)):
         current_date = dates[i]
 
         date_weights = weights_df[weights_df['date'] == current_date.date()]
@@ -106,9 +112,18 @@ def main():
     print(weights.tail())
     print("="*90 + "\n")
 
-    pf_equal, samples_equal = backtest_portfolio(prices, weights, 'weight_equal')
-    pf_risk, samples_risk = backtest_portfolio(prices, weights, 'weight_risk_adjusted')
-    pf_regime, samples_regime = backtest_portfolio(prices, weights, 'weight_regime_aware')
+    valid_dates = weights['date'].unique()
+    valid_dates = sorted(valid_dates)
+    first_valid_date = valid_dates[0] if valid_dates else None
+
+    print(f"\nWeight data coverage:")
+    print(f"  First valid date for all strategies: {first_valid_date}")
+    print(f"  Prices data from: {prices.index.min()} to {prices.index.max()}")
+    print(f"  Backtest will run from: {first_valid_date}\n")
+
+    pf_equal, samples_equal = backtest_portfolio(prices, weights, 'weight_equal', start_date=pd.to_datetime(first_valid_date))
+    pf_risk, samples_risk = backtest_portfolio(prices, weights, 'weight_risk_adjusted', start_date=pd.to_datetime(first_valid_date))
+    pf_regime, samples_regime = backtest_portfolio(prices, weights, 'weight_regime_aware', start_date=pd.to_datetime(first_valid_date))
 
     print("\n" + "="*90)
     print("DEBUG: SAMPLE WEIGHTS USED IN EACH PORTFOLIO")
