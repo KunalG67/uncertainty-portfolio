@@ -25,9 +25,9 @@ X_test_scaled = scaler.transform(X_test)
 predictions = []
 
 for stock in stock_cols:
-    y = returns[stock].iloc[X.index]
-    y_train = y[:split_idx]
-    y_test = y[split_idx:]
+    y = returns[stock].loc[X.index]
+    y_train = y.iloc[:split_idx]
+    y_test = y.iloc[split_idx:]
 
     model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
     model.fit(X_train_scaled, y_train)
