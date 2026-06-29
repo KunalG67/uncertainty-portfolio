@@ -134,6 +134,23 @@ python src/plots.py
 
 *Results computed on 2018-2024 historical data (6 years) with monthly rebalancing. Initial capital: $100,000*
 
+## Results & Visualizations
+
+### Portfolio Comparison
+![Portfolio Comparison](results/plots/portfolio_comparison.png)
+
+**Chart**: Cumulative returns of all three strategies over time with market regime background shading (green=Bull, red=Bear, grey=Sideways). The Risk-Adjusted strategy consistently outperforms both baselines across all market regimes.
+
+### Prediction Uncertainty Analysis
+![Uncertainty Analysis](results/plots/uncertainty_analysis.png)
+
+**Chart**: Scatter plot of predicted returns vs model uncertainty for individual stock predictions. Color gradient (red→yellow→green) shows magnitude of predicted returns. Demonstrates the model's ability to calibrate confidence in return predictions.
+
+### Market Regime Distribution
+![Regime Distribution](results/plots/regime_distribution.png)
+
+**Chart**: Frequency distribution of market regimes across the backtesting period. Shows the time spent in each regime: Bull (growth markets), Bear (declining markets), and Sideways (consolidation).
+
 ## Tech Stack
 
 | Component | Technology |
