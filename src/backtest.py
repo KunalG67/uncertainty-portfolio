@@ -7,9 +7,28 @@ def calculate_metrics(portfolio_values, rf_rate=0.02):
     returns = portfolio_values.pct_change().dropna()
 
     if len(returns) == 0:
-        return {'Annualized Return': 0, 'Sharpe Ratio': 0, 'Max Drawdown': 0, 'Calmar Ratio': 0}
+        return {'Annualized Return': 0, 'Sharpe Ratio': 0, 'Max Drawdown': 0, 'Calmar Ratio': 0, 'Total Return': 0, 'Active Period (years)': 0}
 
-    annual_return = (portfolio_values.iloc[-1] / portfolio_values.iloc[0]) ** (252 / len(returns)) - 1
+    # Find first active date (when portfolio value changes from initial value)
+    initial_value = portfolio_values.iloc[0]
+    first_active_idx = (portfolio_values != initial_value).argmax()
+    if first_active_idx == 0 and portfolio_values.iloc[0] == initial_value:
+        first_active_date = portfolio_values.index[0]
+    else:
+        first_active_date = portfolio_values.index[first_active_idx]
+
+    last_date = portfolio_values.index[-1]
+
+    # Calculate n_years using only active period
+    n_years = (last_date - first_active_date).days / 365.25
+
+    # Calculate total and annualized return using correct time period
+    total_return = (portfolio_values.iloc[-1] / portfolio_values.iloc[0]) - 1
+    if n_years > 0:
+        annual_return = (1 + total_return) ** (1 / n_years) - 1
+    else:
+        annual_return = 0
+
     annual_std = returns.std() * np.sqrt(252)
     sharpe_ratio = (annual_return - rf_rate) / annual_std if annual_std > 0 else 0
 
@@ -24,7 +43,9 @@ def calculate_metrics(portfolio_values, rf_rate=0.02):
         'Annualized Return': annual_return,
         'Sharpe Ratio': sharpe_ratio,
         'Max Drawdown': max_drawdown,
-        'Calmar Ratio': calmar_ratio
+        'Calmar Ratio': calmar_ratio,
+        'Total Return': total_return,
+        'Active Period (years)': n_years
     }
 
 def backtest_portfolio(prices, weights_df, weight_col, initial_capital=100000, start_date=None):
@@ -192,7 +213,7 @@ def main():
         metrics.append(m)
 
     metrics_df = pd.DataFrame(metrics)
-    metrics_df = metrics_df[['Portfolio', 'Annualized Return', 'Sharpe Ratio', 'Max Drawdown', 'Calmar Ratio']]
+    metrics_df = metrics_df[['Portfolio', 'Total Return', 'Active Period (years)', 'Annualized Return', 'Sharpe Ratio', 'Max Drawdown', 'Calmar Ratio']]
 
     print("\n" + "="*90)
     print("BACKTEST RESULTS - PORTFOLIO PERFORMANCE")
@@ -200,6 +221,8 @@ def main():
 
     for idx, row in metrics_df.iterrows():
         print(f"\n{row['Portfolio']}")
+        print(f"  Total Return:       {row['Total Return']:>10.2%}")
+        print(f"  Active Period:      {row['Active Period (years)']:>10.2f} years")
         print(f"  Annualized Return:  {row['Annualized Return']:>10.2%}")
         print(f"  Sharpe Ratio:       {row['Sharpe Ratio']:>10.2f}")
         print(f"  Max Drawdown:       {row['Max Drawdown']:>10.2%}")
