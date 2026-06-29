@@ -36,6 +36,8 @@ def backtest_portfolio(prices, weights_df, weight_col, initial_capital=100000):
     last_weights = None
     last_stocks = None
 
+    sample_weights = []
+
     for i in range(1, len(dates)):
         current_date = dates[i]
 
@@ -57,6 +59,14 @@ def backtest_portfolio(prices, weights_df, weight_col, initial_capital=100000):
             last_weights = weights
             last_stocks = stocks
 
+            if len(sample_weights) < 3:
+                sample_weights.append({
+                    'date': dates[i],
+                    'weight_col': weight_col,
+                    'weights': weights.copy(),
+                    'stocks': stocks.copy()
+                })
+
         available_prices = prices.columns.intersection(stocks)
         price_returns = (prices.iloc[i][available_prices] / prices.iloc[i-1][available_prices]).values
         weights_aligned = weights[:len(available_prices)]
@@ -66,7 +76,7 @@ def backtest_portfolio(prices, weights_df, weight_col, initial_capital=100000):
         current_value = current_value * (1 + portfolio_return)
         portfolio_values.append(current_value)
 
-    return pd.Series(portfolio_values, index=dates)
+    return pd.Series(portfolio_values, index=dates), sample_weights
 
 def main():
     data_dir = Path('data')
@@ -79,9 +89,57 @@ def main():
 
     prices = prices.sort_index()
 
-    pf_equal = backtest_portfolio(prices, weights, 'weight_equal')
-    pf_risk = backtest_portfolio(prices, weights, 'weight_risk_adjusted')
-    pf_regime = backtest_portfolio(prices, weights, 'weight_regime_aware')
+    print("\n" + "="*90)
+    print("DEBUG: PORTFOLIO WEIGHTS DATA")
+    print("="*90)
+    print(f"Weights shape: {weights.shape}")
+    print(f"Weights columns: {weights.columns.tolist()}")
+    print(f"Date range: {weights['date'].min()} to {weights['date'].max()}")
+    print(f"Unique dates: {weights['date'].nunique()}")
+    print(f"\nUnique dates per weight column:")
+    for col in ['weight_equal', 'weight_risk_adjusted', 'weight_regime_aware']:
+        unique_dates = weights[weights[col].notna()]['date'].nunique()
+        print(f"  {col}: {unique_dates} dates")
+    print(f"\nFirst 5 rows of weights:")
+    print(weights.head())
+    print(f"\nLast 5 rows of weights:")
+    print(weights.tail())
+    print("="*90 + "\n")
+
+    pf_equal, samples_equal = backtest_portfolio(prices, weights, 'weight_equal')
+    pf_risk, samples_risk = backtest_portfolio(prices, weights, 'weight_risk_adjusted')
+    pf_regime, samples_regime = backtest_portfolio(prices, weights, 'weight_regime_aware')
+
+    print("\n" + "="*90)
+    print("DEBUG: SAMPLE WEIGHTS USED IN EACH PORTFOLIO")
+    print("="*90)
+    print("\nEqual Weight samples:")
+    for s in samples_equal:
+        print(f"  Date {s['date']}: weights sum={s['weights'].sum():.6f}, first 3 weights={s['weights'][:3]}")
+    print("\nRisk-Adjusted samples:")
+    for s in samples_risk:
+        print(f"  Date {s['date']}: weights sum={s['weights'].sum():.6f}, first 3 weights={s['weights'][:3]}")
+    print("\nRegime-Aware samples:")
+    for s in samples_regime:
+        print(f"  Date {s['date']}: weights sum={s['weights'].sum():.6f}, first 3 weights={s['weights'][:3]}")
+    print("="*90 + "\n")
+
+    print("\n" + "="*90)
+    print("DEBUG: PORTFOLIO VALUES")
+    print("="*90)
+    print(f"\nEqual Weight - First 10 values:")
+    print(pf_equal.head(10))
+    print(f"\nEqual Weight - Last 10 values:")
+    print(pf_equal.tail(10))
+    print(f"\nRisk-Adjusted - First 10 values:")
+    print(pf_risk.head(10))
+    print(f"\nRisk-Adjusted - Last 10 values:")
+    print(pf_risk.tail(10))
+    print(f"\nRegime-Aware - First 10 values:")
+    print(pf_regime.head(10))
+    print(f"\nRegime-Aware - Last 10 values:")
+    print(pf_regime.tail(10))
+    print("="*90 + "\n")
 
     results_df = pd.DataFrame({
         'Date': prices.index,
