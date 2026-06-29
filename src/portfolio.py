@@ -25,6 +25,7 @@ for date in predictions['date'].unique():
     signal = np.maximum(signal, 0)
     w_risk = signal / (signal.sum() + 1e-8)
     w_risk = np.where(np.isnan(w_risk), 1/n_stocks, w_risk)
+    w_risk = w_risk / w_risk.sum()
 
     if regime_val == 'Bear':
         w_regime = w_equal.copy()
@@ -34,6 +35,7 @@ for date in predictions['date'].unique():
     elif regime_val == 'Bull':
         w_regime = signal / (signal.sum() + 1e-8)
         w_regime = np.where(np.isnan(w_regime), 1/n_stocks, w_regime)
+        w_regime = w_regime / w_regime.sum()
     else:
         w_regime = w_equal.copy()
 
