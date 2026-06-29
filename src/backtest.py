@@ -33,29 +33,29 @@ def backtest_portfolio(prices, weights_df, weight_col, initial_capital=100000):
     current_value = initial_capital
 
     dates = prices.index
-    last_rebalance_month = None
+    last_weights = None
+    last_stocks = None
 
     for i in range(1, len(dates)):
         current_date = dates[i]
-        prev_date = dates[i-1]
-
-        if current_date.date() not in weights_df['date'].values:
-            daily_return = (prices.iloc[i] / prices.iloc[i-1]).mean() - 1
-            current_value = current_value * (1 + daily_return)
-            portfolio_values.append(current_value)
-            continue
 
         date_weights = weights_df[weights_df['date'] == current_date.date()]
 
         if date_weights.empty:
-            daily_return = (prices.iloc[i] / prices.iloc[i-1]).mean() - 1
-            current_value = current_value * (1 + daily_return)
-            portfolio_values.append(current_value)
-            continue
+            if last_weights is None:
+                daily_return = (prices.iloc[i] / prices.iloc[i-1]).mean() - 1
+                current_value = current_value * (1 + daily_return)
+                portfolio_values.append(current_value)
+                continue
 
-        stocks = date_weights['stock'].values
-        weights = date_weights[weight_col].values
-        weights = weights / weights.sum()
+            stocks = last_stocks
+            weights = last_weights
+        else:
+            stocks = date_weights['stock'].values
+            weights = date_weights[weight_col].values
+            weights = weights / weights.sum()
+            last_weights = weights
+            last_stocks = stocks
 
         available_prices = prices.columns.intersection(stocks)
         price_returns = (prices.iloc[i][available_prices] / prices.iloc[i-1][available_prices]).values
