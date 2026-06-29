@@ -75,7 +75,9 @@ def backtest_portfolio(prices, weights_df, weight_col, initial_capital=100000, s
 
         available_prices = prices.columns.intersection(stocks)
         price_returns = (prices.iloc[i][available_prices] / prices.iloc[i-1][available_prices]).values
-        weights_aligned = weights[:len(available_prices)]
+
+        stock_indices = [np.where(stocks == stock)[0][0] for stock in available_prices]
+        weights_aligned = weights[stock_indices]
         weights_aligned = weights_aligned / weights_aligned.sum() if weights_aligned.sum() > 0 else weights_aligned
 
         portfolio_return = np.dot(price_returns - 1, weights_aligned)
@@ -124,6 +126,21 @@ def main():
     pf_equal, samples_equal = backtest_portfolio(prices, weights, 'weight_equal', start_date=pd.to_datetime(first_valid_date))
     pf_risk, samples_risk = backtest_portfolio(prices, weights, 'weight_risk_adjusted', start_date=pd.to_datetime(first_valid_date))
     pf_regime, samples_regime = backtest_portfolio(prices, weights, 'weight_regime_aware', start_date=pd.to_datetime(first_valid_date))
+
+    pf_equal_returns = pf_equal.pct_change().dropna()
+    pf_risk_returns = pf_risk.pct_change().dropna()
+    pf_regime_returns = pf_regime.pct_change().dropna()
+
+    print("\n" + "="*90)
+    print("DEBUG: DAILY PORTFOLIO RETURNS")
+    print("="*90)
+    print(f"\nEqual Weight - First 5 daily returns:")
+    print(pf_equal_returns.head())
+    print(f"\nRisk-Adjusted - First 5 daily returns:")
+    print(pf_risk_returns.head())
+    print(f"\nRegime-Aware - First 5 daily returns:")
+    print(pf_regime_returns.head())
+    print("="*90 + "\n")
 
     print("\n" + "="*90)
     print("DEBUG: SAMPLE WEIGHTS USED IN EACH PORTFOLIO")
