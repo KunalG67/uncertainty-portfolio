@@ -45,20 +45,25 @@ def plot_portfolio_comparison():
     if current_regime is not None:
         ax.axvspan(regime_start, end_date, alpha=0.2, color=regime_colors[current_regime])
 
-    ax.plot(results_sorted['Date'], results_sorted['Equal Weight'], label='Equal Weight', linewidth=2)
-    ax.plot(results_sorted['Date'], results_sorted['Risk-Adjusted'], label='Risk-Adjusted', linewidth=2)
-    ax.plot(results_sorted['Date'], results_sorted['Regime-Aware'], label='Regime-Aware', linewidth=2)
+    ax.plot(results_sorted['Date'], results_sorted['Equal Weight'], label='Equal Weight', linewidth=2, color='#1f77b4')
+    ax.plot(results_sorted['Date'], results_sorted['Risk-Adjusted'], label='Risk-Adjusted', linewidth=2, color='#ff7f0e')
+    ax.plot(results_sorted['Date'], results_sorted['Regime-Aware'], label='Regime-Aware', linewidth=2, color='#9370db')
 
     ax.set_xlabel('Date', fontsize=12)
     ax.set_ylabel('Portfolio Value ($)', fontsize=12)
     ax.set_title('Portfolio Comparison with Regime Background', fontsize=14, fontweight='bold')
-    ax.legend(loc='upper left', fontsize=11)
     ax.grid(True, alpha=0.3)
 
     bull_patch = mpatches.Patch(color='#90EE90', label='Bull', alpha=0.3)
     bear_patch = mpatches.Patch(color='#FF6B6B', label='Bear', alpha=0.3)
     sideways_patch = mpatches.Patch(color='#D3D3D3', label='Sideways', alpha=0.3)
-    ax.legend(handles=[bull_patch, bear_patch, sideways_patch], loc='upper right', fontsize=10)
+
+    portfolio_handles, portfolio_labels = ax.get_legend_handles_labels()
+    regime_handles = [bull_patch, bear_patch, sideways_patch]
+    regime_labels = ['Bull', 'Bear', 'Sideways']
+
+    ax.legend(handles=portfolio_handles + regime_handles, labels=portfolio_labels + regime_labels,
+              loc='upper left', fontsize=10, ncol=2)
 
     fig.tight_layout()
     Path('results/plots').mkdir(parents=True, exist_ok=True)
