@@ -23,8 +23,15 @@ for date in predictions['date'].unique():
 
     signal = (date_pred['predicted_return'].values / (date_pred['uncertainty'].values + 1e-8))
     signal = np.maximum(signal, 0)
-    w_risk = signal / (signal.sum() + 1e-8)
-    w_risk = np.where(np.isnan(w_risk), 1/n_stocks, w_risk)
+    signal = np.nan_to_num(signal, nan=0.0)
+
+    signal_sum = signal.sum()
+    if signal_sum > 1e-8:
+        w_risk = signal / signal_sum
+    else:
+        w_risk = w_equal.copy()
+
+    w_risk = np.nan_to_num(w_risk, nan=1/n_stocks)
     w_risk = w_risk / w_risk.sum()
 
     if regime_val == 'Bear':
@@ -33,8 +40,13 @@ for date in predictions['date'].unique():
         w_regime[high_unc] *= 0.5
         w_regime = w_regime / w_regime.sum()
     elif regime_val == 'Bull':
-        w_regime = signal / (signal.sum() + 1e-8)
-        w_regime = np.where(np.isnan(w_regime), 1/n_stocks, w_regime)
+        signal_sum = signal.sum()
+        if signal_sum > 1e-8:
+            w_regime = signal / signal_sum
+        else:
+            w_regime = w_equal.copy()
+
+        w_regime = np.nan_to_num(w_regime, nan=1/n_stocks)
         w_regime = w_regime / w_regime.sum()
     else:
         w_regime = w_equal.copy()
