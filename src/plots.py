@@ -23,9 +23,11 @@ def plot_portfolio_comparison():
         (regime_sorted.index >= start_date) & (regime_sorted.index <= end_date)
     ]
 
-    regime_smoothed = regime_filtered['regime'].rolling(window=5, center=True).apply(
-        lambda x: x.mode()[0] if len(x.mode()) > 0 else x.iloc[2], raw=False
-    )
+    regime_numeric = regime_filtered['regime'].map({'Bull': 1, 'Bear': -1, 'Sideways': 0})
+    regime_smoothed_numeric = regime_numeric.rolling(window=5, center=True).mean()
+
+    regime_mapping = {1: 'Bull', -1: 'Bear', 0: 'Sideways'}
+    regime_smoothed = regime_smoothed_numeric.round().map(regime_mapping)
 
     current_regime = None
     regime_start = start_date
