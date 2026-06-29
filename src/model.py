@@ -25,18 +25,26 @@ X_test_scaled = scaler.transform(X_test)
 predictions = []
 
 for stock in stock_cols:
-    y = returns[stock].loc[X.index]
-    y_train = y.iloc[:split_idx]
-    y_test = y.iloc[split_idx:]
+    y = returns[stock].shift(-5).loc[X.index]
+    y = y.dropna()
+    X_aligned = X.loc[y.index]
+    X_train_aligned = X_aligned[:split_idx]
+    X_test_aligned = X_aligned[split_idx:]
+
+    y_train = y.iloc[:len(X_train_aligned)]
+    y_test = y.iloc[len(X_train_aligned):]
+
+    X_train_scaled_aligned = scaler.fit_transform(X_train_aligned)
+    X_test_scaled_aligned = scaler.transform(X_test_aligned)
 
     model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
-    model.fit(X_train_scaled, y_train)
+    model.fit(X_train_scaled_aligned, y_train)
 
-    preds = model.predict(X_test_scaled)
-    tree_preds = np.array([tree.predict(X_test_scaled) for tree in model.estimators_])
+    preds = model.predict(X_test_scaled_aligned)
+    tree_preds = np.array([tree.predict(X_test_scaled_aligned) for tree in model.estimators_])
     uncertainty = np.std(tree_preds, axis=0)
 
-    for i, date in enumerate(X_test.index):
+    for i, date in enumerate(X_test_aligned.index):
         predictions.append({
             'date': date,
             'stock': stock,
