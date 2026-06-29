@@ -23,20 +23,22 @@ def plot_portfolio_comparison():
         (regime_sorted.index >= start_date) & (regime_sorted.index <= end_date)
     ]
 
+    regime_smoothed = regime_filtered['regime'].rolling(window=5, center=True).apply(
+        lambda x: x.mode()[0] if len(x.mode()) > 0 else x.iloc[2], raw=False
+    )
+
     current_regime = None
     regime_start = start_date
 
-    for date in pd.date_range(start_date, end_date, freq='D'):
-        if date in regime_filtered.index:
-            next_regime = regime_filtered.loc[date, 'regime']
-            if next_regime != current_regime and current_regime is not None:
-                ax.axvspan(regime_start, date, alpha=0.2, color=regime_colors[current_regime])
-                regime_start = date
-            current_regime = next_regime
-        elif current_regime is not None:
+    for i, date in enumerate(regime_smoothed.index):
+        if pd.isna(regime_smoothed.iloc[i]):
+            continue
+
+        next_regime = regime_smoothed.iloc[i]
+        if next_regime != current_regime and current_regime is not None:
             ax.axvspan(regime_start, date, alpha=0.2, color=regime_colors[current_regime])
             regime_start = date
-            current_regime = None
+        current_regime = next_regime
 
     if current_regime is not None:
         ax.axvspan(regime_start, end_date, alpha=0.2, color=regime_colors[current_regime])
