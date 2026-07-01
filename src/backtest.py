@@ -56,6 +56,12 @@ def backtest_portfolio(prices, weights_df, weight_col, initial_capital=100000, s
     dates = prices.index
     last_weights = None
     last_stocks = None
+    # Weights computed at close of day t can only be traded at open/close of day t+1.
+    # pending_* holds newly-computed weights until the next iteration activates them.
+    pending_weights = None
+    pending_stocks = None
+
+    TRANSACTION_COST = 0.0010  # 10 bps one-way on turnover
 
     sample_weights = []
     start_idx = 0
@@ -68,37 +74,47 @@ def backtest_portfolio(prices, weights_df, weight_col, initial_capital=100000, s
     for i in range(max(1, start_idx), len(dates)):
         current_date = dates[i]
 
-        date_weights = weights_df[weights_df['date'] == current_date.date()]
-
-        if date_weights.empty:
-            if last_weights is None:
-                daily_return = (prices.iloc[i] / prices.iloc[i-1]).mean() - 1
-                current_value = current_value * (1 + daily_return)
-                portfolio_values.append(current_value)
-                continue
-
-            stocks = last_stocks
-            weights = last_weights
-        else:
-            stocks = date_weights['stock'].values
-            weights = date_weights[weight_col].values
-            weights = weights / weights.sum()
-            last_weights = weights
-            last_stocks = stocks
-
+        # --- Step 1: activate weights queued from the previous day's rebalance ---
+        if pending_weights is not None:
+            if last_weights is not None:
+                old_w = dict(zip(last_stocks, last_weights))
+                new_w = dict(zip(pending_stocks, pending_weights))
+                all_s = set(old_w) | set(new_w)
+                turnover = sum(abs(new_w.get(s, 0.0) - old_w.get(s, 0.0)) for s in all_s)
+                current_value *= (1.0 - turnover * TRANSACTION_COST)
+            last_weights = pending_weights
+            last_stocks = pending_stocks
             if len(sample_weights) < 3:
                 sample_weights.append({
-                    'date': dates[i],
+                    'date': current_date,
                     'weight_col': weight_col,
-                    'weights': weights.copy(),
-                    'stocks': stocks.copy()
+                    'weights': last_weights.copy(),
+                    'stocks': last_stocks.copy()
                 })
+            pending_weights = None
+            pending_stocks = None
 
-        available_prices = prices.columns.intersection(stocks)
+        # --- Step 2: queue new weights if today is a rebalance date ---
+        # (They use features known only at today's close, so they take effect tomorrow.)
+        date_weights = weights_df[weights_df['date'] == current_date.date()]
+        if not date_weights.empty:
+            w = date_weights[weight_col].values
+            w = w / w.sum()
+            pending_weights = w
+            pending_stocks = date_weights['stock'].values
+
+        # --- Step 3: compute today's return using weights decided before today ---
+        if last_weights is None:
+            daily_return = (prices.iloc[i] / prices.iloc[i-1]).mean() - 1
+            current_value = current_value * (1 + daily_return)
+            portfolio_values.append(current_value)
+            continue
+
+        available_prices = prices.columns.intersection(last_stocks)
         price_returns = (prices.iloc[i][available_prices] / prices.iloc[i-1][available_prices]).values
 
-        stock_indices = [np.where(stocks == stock)[0][0] for stock in available_prices]
-        weights_aligned = weights[stock_indices]
+        stock_indices = [np.where(last_stocks == stock)[0][0] for stock in available_prices]
+        weights_aligned = last_weights[stock_indices]
         weights_aligned = weights_aligned / weights_aligned.sum() if weights_aligned.sum() > 0 else weights_aligned
 
         portfolio_return = np.dot(price_returns - 1, weights_aligned)

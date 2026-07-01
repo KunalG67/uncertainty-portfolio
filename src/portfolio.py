@@ -9,7 +9,16 @@ regime.index = pd.to_datetime(regime.index)
 
 portfolio_weights = []
 
-for date in predictions['date'].unique():
+all_dates = sorted(predictions['date'].unique())
+rebalance_dates = []
+seen_months = set()
+for date in all_dates:
+    month_key = (date.year, date.month)
+    if month_key not in seen_months:
+        rebalance_dates.append(date)
+        seen_months.add(month_key)
+
+for date in rebalance_dates:
     date_pred = predictions[predictions['date'] == date]
 
     if date not in regime.index:

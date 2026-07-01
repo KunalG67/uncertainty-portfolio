@@ -21,7 +21,7 @@ Market regimes are identified based on:
 ### 3. ML Return Prediction
 - **Model**: Random Forest Regressor (100 trees)
 - **Training**: 80/20 train-test split
-- **Uncertainty Quantification**: Standard deviation across tree predictions (captures aleatoric uncertainty)
+- **Uncertainty Quantification**: Standard deviation across tree predictions (captures epistemic (model) uncertainty)
 
 ### 4. Dynamic Portfolio Weights
 Three allocation strategies based on ML predictions and regimes:
@@ -120,27 +120,27 @@ python src/plots.py
 
 ## Key Results
 
-| Portfolio Strategy | Annualized Return | Sharpe Ratio | Max Drawdown | Calmar Ratio |
-|-------------------|-------------------|--------------|--------------|--------------|
-| Equal Weight | 1.73% | -0.04 | -10.62% | 0.16 |
-| Risk-Adjusted | 35.10% | 3.69 | -5.84% | 6.01 |
-| Regime-Aware | 16.09% | 1.83 | -8.69% | 1.85 |
+| Portfolio Strategy | Total Return | Annualized Return | Sharpe Ratio | Max Drawdown | Calmar Ratio |
+|-------------------|--------------|-------------------|--------------|--------------|--------------|
+| Equal Weight | 10.83% | 9.28% | 1.15 | -10.62% | 0.87 |
+| Risk-Adjusted | -20.48% | -17.95% | -2.68 | -26.66% | -0.67 |
+| Regime-Aware | -7.16% | -6.21% | -1.26 | -18.79% | -0.33 |
 
 **Key Findings:**
-- **Risk-Adjusted strategy significantly outperforms** with 35.10% annualized return and 3.69 Sharpe ratio
-- Risk-Adjusted also has the lowest max drawdown (-5.84%), demonstrating superior risk management
-- Uncertainty-based weighting achieves 6.01 Calmar ratio vs 0.16 for equal weight (37.6x improvement)
-- Regime-Aware strategy balances return (16.09%) with moderate risk, performing well in varying market conditions
-- Equal Weight baseline shows negative Sharpe ratio, highlighting the value of ML-driven allocation
+- **Equal Weight was the only profitable strategy** over this test window (9.28% annualized return, 1.15 Sharpe), outperforming both ML-driven strategies
+- The Risk-Adjusted and Regime-Aware strategies — which rely on the RF model's 5-day return predictions to tilt allocations — both underperformed the simple baseline, with the Risk-Adjusted strategy losing 20.48% total
+- The model's signal did not generalize out-of-sample on this feature set and prediction horizon; short-horizon equity return prediction is a well-known hard problem, and the RF ensemble is likely capturing noise rather than persistent alpha
+- A larger max drawdown for the ML strategies (-26.66% vs -10.62%) suggests that confidence-weighted concentration in the RF's predicted winners hurt performance when those predictions were wrong
+- These results highlight that a higher Sharpe in backtesting does not guarantee out-of-sample outperformance, especially without walk-forward validation
 
-*Results computed on test set (2020-2024 data) with monthly rebalancing. Backtesting starts from first date with valid ML predictions. Initial capital: $100,000*
+*Results computed on test set (backtest window: 2022-11-01 to 2023-12-21, active period: 1.16 years) with monthly rebalancing and 10 bps one-way transaction costs. Backtesting starts from the first date with valid ML predictions. Initial capital: $100,000*
 
 ## Results & Visualizations
 
 ### Portfolio Comparison
 ![Portfolio Comparison](results/plots/portfolio_comparison.png)
 
-**Chart**: Cumulative returns of all three strategies over time with market regime background shading (green=Bull, red=Bear, grey=Sideways). The Risk-Adjusted strategy consistently outperforms both baselines across all market regimes.
+**Chart**: Cumulative returns of all three strategies over time with market regime background shading (green=Bull, red=Bear, grey=Sideways). Equal Weight outperforms both ML-driven strategies over the test window; the Risk-Adjusted and Regime-Aware strategies trail due to the RF model's predictions not generalizing out-of-sample.
 
 ### Prediction Uncertainty Analysis
 ![Uncertainty Analysis](results/plots/uncertainty_analysis.png)
@@ -172,9 +172,13 @@ python src/plots.py
 ✓ Comprehensive backtesting framework  
 ✓ Publication-ready visualizations  
 
+## Methodology Notes / Lessons Learned
+
+An earlier version of this backtest contained two implementation bugs that inflated reported performance to an unrealistic 3.69 Sharpe ratio. First, portfolio weights were computed using features derived from close-of-day-t prices, but those weights were then immediately applied to day t's already-realized returns — a look-ahead bias that effectively let the model "trade after knowing the outcome." Second, weights were recomputed every trading day (not monthly as documented), and no transaction costs were modeled; daily turnover across 18 assets with zero friction cost further inflated returns. Both issues were identified through systematic code review and corrected: the pipeline now uses monthly rebalancing (first trading day of each calendar month), deducts 10 bps one-way transaction costs on portfolio turnover at each rebalance, and ensures weights computed at close of day t are only applied to returns starting at day t+1. The corrected results are reported above and represent a forward-only, friction-aware backtest.
+
 ## Notes
 
 - Data covers 18 assets (15 mega-cap stocks + 3 commodities/indices): AAPL, MSFT, GOOGL, JPM, BAC, JNJ, PFE, XOM, CVX, WMT, HD, PG, KO, DIS, TSLA, ^VIX, GLD, USO
-- Train-test split (80/20) prevents lookahead bias
-- Rebalancing frequency can be modified in `backtest.py`
-- Results are sensitive to feature engineering and hyperparameters
+- Train-test split (80/20) is chronological (train on earlier dates, test on later dates)
+- Rebalancing frequency can be modified in `portfolio.py` (currently: first trading day of each month)
+- Results are sensitive to feature engineering and hyperparameters; walk-forward validation would give a more robust performance estimate
